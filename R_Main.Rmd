@@ -11,8 +11,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r}
+library(MASS)
+library(brant)
+library(VGAM)
+library(erer)
+```
+
+```{r}
 #Import
-data <- read.csv("~/Stat230Project/Inflation_Expectation/data/data.csv")
+data <- read.csv("data/data.csv")
 ```
 
 ```{r}
@@ -22,14 +29,46 @@ data
 
 ```{r}
 #Period between 1984:1 to 2012:12
-cleaned_data=data[data$yyyymm >= 198401] 
-cleaned_data=data[data$yyyymm <= 201212]
+cleaned_data=data[data$yyyymm >= 198401, ]
+cleaned_data=cleaned_data[cleaned_data$yyyymm <= 201212, ]
 #Only keep first time responces
-cleaned_data=cleaned_data[is.nan(cleaned_data$datepr)]
+cleaned_data=cleaned_data[is.na(cleaned_data$datepr), ]
+cleaned_data["AGE2"] = cleaned_data["AGE"]*cleaned_data["AGE"]
+cleaned_data["AGE3"] = cleaned_data["AGE2"]*cleaned_data["AGE"]
+cleaned_data["PX1_ZLB"] = cleaned_data["PX1"]*cleaned_data["ZLB"]
 ```
 
 ```{r}
-data$yyyymm >= 198401
+cleaned_data
 ```
+
+```{r}
+trans = c("AGE2","AGE3","PX1_ZLB")
+pi = c("DUR", "PX1", "PX1_ZLB")
+control = c("SEX","MARRY","ECLGRD","AFRICAN","HISPANIC","NATIVE","ASIAN","WEST",
+       "NORTHEAST","SOUTH","FAMSIZE","AGE","AGE2", "INCOME")
+ocontrol = c("ZLB","PEXP","RINC","RATEX","BUS12","BUS5","UNEMP","PAGO","GOVT",
+            "BUS12AG","PX1DISP","VXO","FFR","UNRATE","INFLATION","INFLVOLA","CPIDURABLES")
+
+covars = c(pi,ocontrol,control)
+model_df = cleaned_data[c(pi,ocontrol,control)]
+model_df = na.omit(model_df)
+model_df
+```
+
+```{r}
+model_df$DUR = as.factor(model_df$DUR)
+# form = paste("DUR ~", paste(covars[covars != 'DUR'],collapse='+'))
+m <- polr(DUR ~ PX1+PX1_ZLB+ZLB+PEXP+RINC+RATEX+BUS12+BUS5+UNEMP+PAGO+GOVT+BUS12AG+PX1DISP+VXO+FFR+UNRATE+INFLATION+INFLVOLA+CPIDURABLES+SEX+MARRY+ECLGRD+AFRICAN+HISPANIC+NATIVE+ASIAN+WEST+NORTHEAST+SOUTH+FAMSIZE+AGE+INCOME,
+          method = 'probit', # change to 'probit' for ordered probit
+          data = model_df,
+          na.action = na.omit)
+summary(m)
+```
+
+```{r}
+brant(m)
+```
+
 
 
